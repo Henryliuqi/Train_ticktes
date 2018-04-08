@@ -85,24 +85,27 @@ class Cli(object):
     def __init__(self):
         super(Cli, self).__init__()
 
-    def check_arguments_validity(self):
-        if self.from_station is None or self.to_station is None:
+    def check_arguments_validity(self, date, from_station, to_station):
+        if from_station is None or to_station is None:
             print(u'请输入有效的车站名称')
             exit()
         try:
-            if datetime.strptime(self.date, '%Y-%m-%d') < datetime.now():
+            if datetime.strptime(date, '%Y-%m-%d') < datetime.now():
                 raise ValueError
         except:
             print(u'请输入有效日期')
             exit()
 
-    def run(self):
+    def start(self):
         parser = argparse.ArgumentParser()
         parser.add_argument('-s', action='append', dest='option', default=['g','d'], help='...')
         parser.add_argument('-f', action='store', type=str, dest='form', default='', help='...')
         parser.add_argument('-t', action='store',type=str, dest='to', default='', help='...')
         parser.add_argument('-T', action='store', dest='time', default='', help='...')
-        pas = parser.parse_args()
+        self.pas = parser.parse_args()
+        self.run()
+
+    def run(self):
         url_template = (
             'https://kyfw.12306.cn/otn/leftTicket/queryO?leftTicketDTO.'
             'train_date={}&'
@@ -110,15 +113,16 @@ class Cli(object):
             'leftTicketDTO.to_station={}&'
             'purpose_codes=ADULT'
         )
-        from_staion = stations.get_telecode(pas.form)
-        to_station = stations.get_telecode(pas.to)
-        date = pas.time
-        url = url_template.format(date, from_staion, to_station)
+        from_station = stations.get_telecode(self.pas.form)
+        to_station = stations.get_telecode(self.pas.to)
+        date = self.pas.time
+        self.check_arguments_validity(date, from_station, to_station)
+        url = url_template.format(date, from_station, to_station)
         r = requests.get(url)
         r.encoding = 'utf-8'
         trains = r.json()['data']['result']
-        TrainCollection(trains, pas.option).pretty_print()
+        TrainCollection(trains, self.pas.option).pretty_print()
 
 
 if __name__ == '__main__':
-    Cli().run()
+    Cli().start()
